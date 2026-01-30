@@ -44,13 +44,13 @@ class LargeUploadController extends Controller
             'Bucket' => config('filesystems.disks.s3.bucket'),
             'Key' => $request->key,
             'UploadId' => $request->uploadId,
-            'PartNumber' => $request->partNumber,
+            'PartNumber' => (int) $request->partNumber,
         ]);
 
-        $request = $s3->createPresignedRequest($cmd, '+15 minutes');
+        $presignedRequest = $s3->createPresignedRequest($cmd, '+15 minutes');
 
         return response()->json([
-            'url' => (string) $request->getUri(),
+            'url' => (string) $presignedRequest->getUri(),
         ]);
     }
 
@@ -58,12 +58,26 @@ class LargeUploadController extends Controller
     {
         $s3 = $this->s3Client();
 
+        // Since we are sending JSON properly, Laravel already parses it
+        $parts = $request->input('parts');
+
+        if (!$parts || !is_array($parts)) {
+            return response()->json([
+                'error' => 'Invalid parts data'
+            ], 400);
+        }
+
+        // Ensure parts are sorted
+        usort($parts, function ($a, $b) {
+            return $a['PartNumber'] <=> $b['PartNumber'];
+        });
+
         $result = $s3->completeMultipartUpload([
             'Bucket' => config('filesystems.disks.s3.bucket'),
             'Key' => $request->key,
             'UploadId' => $request->uploadId,
             'MultipartUpload' => [
-                'Parts' => $request->parts,
+                'Parts' => $parts,
             ],
         ]);
 

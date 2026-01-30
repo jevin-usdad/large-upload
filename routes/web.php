@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\LargeUploadController;
 
 Route::get('/', function () {
-    return view('welcome');
+    return view('s3-upload');
 });
 
 Route::post('/upload/initiate', [LargeUploadController::class, 'initiate']);
